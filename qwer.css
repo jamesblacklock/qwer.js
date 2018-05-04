@@ -1,0 +1,384 @@
+.qwerModal
+{
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 999;
+	display: flex;
+	padding: 8px;
+}
+
+.qwerModal:last-of-type
+{
+	background-color: rgb(0,0,0,0.4);
+}
+
+.qwerAnchorPoint
+{
+	position: fixed;
+	width: 0;
+	height: 0;
+	z-index: 999;
+}
+
+.qwerPanel
+{
+	position: absolute;
+	z-index: 998;
+	box-shadow: rgb(136, 136, 136, 0.6) 0px 0px 6px;
+	max-height: 100%;
+	display: flex;
+	flex-direction: column;
+	max-height: calc(100% - 10px);
+}
+
+.qwerPanel > .resize.n,
+.qwerPanel > .resize.s,
+.qwerPanel > .resize.e,
+.qwerPanel > .resize.w
+{
+	position: absolute;
+}
+
+.qwerPanel > .resize.n,
+.qwerPanel > .resize.s
+{
+	height: 7px;
+	width: 100%;
+	cursor: ns-resize;
+}
+
+.qwerPanel > .resize.e,
+.qwerPanel > .resize.w
+{
+	width: 7px;
+	height: 100%;
+	cursor: ew-resize;
+}
+
+.qwerPanel > .resize.n
+{
+	top: -4px;
+}
+
+.qwerPanel > .resize.s
+{
+	bottom: -4px;
+}
+
+.qwerPanel > .resize.e
+{
+	right: -4px;
+}
+
+.qwerPanel > .resize.w
+{
+	left: -4px;
+}
+
+.qwerPanel > .resize.n.e,
+.qwerPanel > .resize.s.e,
+.qwerPanel > .resize.n.w,
+.qwerPanel > .resize.s.w
+{
+	width: 7px;
+	height: 7px;
+}
+
+.qwerPanel > .resize.n.e,
+.qwerPanel > .resize.s.w
+{
+	cursor: ne-resize;
+}
+
+.qwerPanel > .resize.s.e,
+.qwerPanel > .resize.n.w
+{
+	cursor: nw-resize;
+}
+
+.qwerModal > .qwerPanel
+{
+	box-shadow: rgb(0,0,0,0.4) 0px 0px 6px;
+}
+
+.qwerModal.fixed > .qwerPanel
+{
+	position: static;
+	margin: auto;
+}
+
+.qwerPanel > *
+{
+	flex-shrink: 0;
+}
+
+.qwerPanel > .titleBar
+{
+	display: flex;
+	background-color: #424242;
+	color: #f0f0f0;
+	padding: 5px 16px 6px 16px;
+	font-size: 14px;
+	cursor: move;
+}
+
+.qwerModal.fixed .qwerPanel .titleBar
+{
+	cursor: default;
+}
+
+body.qwerPanelDragging
+{
+	cursor: move !important;
+}
+
+.qwerPanel > .titleBar .icon
+{
+	font-size: 16px;
+	margin: -2px 8px -2px 0;
+}
+
+.qwerPanel > .titleBar .title
+{
+	flex: 1;
+}
+
+.qwerPanel > .titleBar button
+{
+	width: 16px;
+	height: 16px;
+	color: #fff;
+	text-align: center;
+	opacity: 0.8;
+	padding: 0;
+	background: none;
+	border: none;
+	font-size: inherit;
+	align-self: center;
+	cursor: pointer;
+	margin: 0 0 0 6px;
+}
+
+.qwerPanel > .titleBar button:hover
+{
+	opacity: 1;
+}
+
+.qwerPanel > .titleBar button:active
+{
+	opacity: 0.6;
+}
+
+.qwerPanel > .content
+{
+	opacity: 0.95;
+	background-color: #fff;
+	overflow: hidden;
+	display: flex;
+    flex-direction: column;
+	flex-shrink: 1;
+}
+
+.qwerPanel.collapsed > .content
+{
+	height: 0 !important;
+	min-height: 0 !important;
+}
+
+.qwerPanel > .content.dragging
+{
+	filter: blur(3px) grayscale(0.5);
+	opacity: 0.65;
+}
+
+.qwerFlyout
+{
+	background-color: #fff;
+	position: absolute;
+	border: 1px solid #d0d0d0;
+	max-height: 100vh;
+	overflow: auto;
+}
+
+.qwerMenu > .menuItem
+{
+	cursor: pointer;
+	padding: 7px;
+	white-space: nowrap;
+}
+
+.qwerMenu > .menuSection
+{
+	cursor: default;
+	padding: 7px;
+	white-space: nowrap;
+	font-weight: bold;
+}
+
+.qwerMenu > .menuItem:hover,
+.qwerMenu > .menuItem.preselected
+{
+	background-color: #7bb0dc;
+	color: #fff;
+}
+
+.qwerMenu > .menuItem:active
+{
+	background-color: #699dc7;
+}
+
+.qwerMenu > .menuItem[disabled]
+{
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+.qwerMenu > hr
+{
+	border-top: 1px solid #ccc;
+	border-bottom: none;
+	margin: 4px 0;
+	pointer-events: none;
+}
+
+.qwerDisabledFormControl
+{
+	opacity: 0.5 !important;
+	pointer-events: none !important;
+}
+
+.qwerHiddenFormControl
+{
+	display: none !important;
+}
+
+.qwerTreeExpander
+{
+	cursor: pointer;
+	padding: 4px;
+	margin: -4px 4px -4px -4px;
+}
+
+.qwerTreeExpander.empty
+{
+	visibility: hidden;
+	pointer-events: none;
+}
+
+.qwerTreeExpander.expanded
+{
+	transform: rotate(90deg);
+}
+
+.qwerTreeDepthSpacer
+{
+	display: inline-block;
+}
+
+.qwerSelect
+{
+	border: 1px solid #aaa;
+	padding: 5px 10px;
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+}
+
+/* maintain text baseline */
+.qwerSelect::before
+{
+	content: '!';
+	display: inline-block;
+	width: 0;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.qwerSelect > .sizeBox
+{
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	flex: 1;
+	position: relative;
+}
+
+.qwerSelect > .sizeBox > .placeholder
+{
+	color: #777;
+	pointer-events: none;
+	position: absolute;
+	white-space: nowrap;
+}
+
+.qwerSelect > .sizeBox > .placeholder::after
+{
+	content: '';
+	display: inline-block;
+}
+
+.qwerSelect > .sizeBox > .valueBox
+{
+	display: flex;
+	flex-wrap: wrap;
+	flex: 1;
+}
+
+.qwerSelect.multi > .sizeBox > .valueBox
+{
+	margin: -1px 0;
+}
+
+.qwerSelect > .sizeBox > .valueBox > .singleSelectValue
+{
+	margin-right: 6px;
+}
+
+.qwerSelect > .sizeBox > .valueBox > .multiSelectValue
+{
+	padding: 0 4px;
+	margin: 1px 3px 1px 0;
+	background-color: #8fbde5;
+	color: #fff;
+	border-radius: 4px;
+	display: flex;
+}
+
+.qwerSelect > .sizeBox > .valueBox > .multiSelectValue > .unselect
+{
+	margin-left: 3px;
+	align-self: center;
+	font-size: smaller;
+}
+
+.qwerSelect > .sizeBox > .valueBox > .filter
+{
+	padding: 0;
+	outline: none;
+	border: none;
+	width: 0;
+	flex: 1;
+}
+
+.qwerSelect.filterFocused  > .sizeBox > .valueBox > .filter
+{
+	min-width: 3em;
+}
+
+.qwerSelect > .sizeBox > .valueBox > .filter:not(:focus)
+{
+	cursor: pointer;
+}
+
+.qwerSelect.multi > .sizeBox > .valueBox > .filter
+{
+	margin: 1px 0;
+}
+
+.qwerSelect > .fa-caret-down
+{
+	margin-left: 8px;
+}
