@@ -27,77 +27,56 @@
 {
 	position: absolute;
 	z-index: 998;
-	box-shadow: rgb(136, 136, 136, 0.6) 0px 0px 6px;
-	max-height: 100%;
-	display: flex;
-	flex-direction: column;
+	box-shadow: rgba(0, 0, 0, 0.36) 0px 0px 6px;
 	max-height: calc(100% - 10px);
 }
 
-.qwerPanel > .resize.n,
-.qwerPanel > .resize.s,
-.qwerPanel > .resize.e,
-.qwerPanel > .resize.w
+.qwerPanel.transitions
+{
+	transition: height 188ms;
+}
+
+.qwerPanel.transitions,
+.qwerPanel.collapsed
+{
+	overflow: hidden;
+}
+
+.qwerPanel > .resize
 {
 	position: absolute;
 }
-
-.qwerPanel > .resize.n,
-.qwerPanel > .resize.s
+.qwerPanel:not(.resizeable) > .resize,
+.qwerPanel.collapsed > .resize
+{
+	display: none;
+}
+.qwerPanel > .n,
+.qwerPanel > .s
 {
 	height: 7px;
 	width: 100%;
 	cursor: ns-resize;
 }
-
-.qwerPanel > .resize.e,
-.qwerPanel > .resize.w
+.qwerPanel > .e,
+.qwerPanel > .w
 {
 	width: 7px;
 	height: 100%;
 	cursor: ew-resize;
 }
-
-.qwerPanel > .resize.n
-{
-	top: -4px;
-}
-
-.qwerPanel > .resize.s
-{
-	bottom: -4px;
-}
-
-.qwerPanel > .resize.e
-{
-	right: -4px;
-}
-
-.qwerPanel > .resize.w
-{
-	left: -4px;
-}
-
-.qwerPanel > .resize.n.e,
-.qwerPanel > .resize.s.e,
-.qwerPanel > .resize.n.w,
-.qwerPanel > .resize.s.w
-{
-	width: 7px;
-	height: 7px;
-}
-
-.qwerPanel > .resize.n.e,
-.qwerPanel > .resize.s.w
-{
-	cursor: ne-resize;
-}
-
-.qwerPanel > .resize.s.e,
-.qwerPanel > .resize.n.w
-{
-	cursor: nw-resize;
-}
+.qwerPanel > .n    { top:    -4px; }
+.qwerPanel > .s    { bottom: -4px; }
+.qwerPanel > .e    { right:  -4px; }
+.qwerPanel > .w    { left:   -4px; }
+.qwerPanel > .n.e,
+.qwerPanel > .s.e,
+.qwerPanel > .n.w,
+.qwerPanel > .s.w  { width: 7px; height: 7px; }
+.qwerPanel > .n.e,
+.qwerPanel > .s.w  { cursor: ne-resize; }
+.qwerPanel > .s.e,
+.qwerPanel > .n.w  { cursor: nw-resize; }
 
 .qwerModal > .qwerPanel
 {
@@ -110,12 +89,26 @@
 	margin: auto;
 }
 
-.qwerPanel > *
+.qwerPanel > .container
+{
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	/*height: 100%;*/
+    overflow: hidden;
+}
+
+.qwerPanel.transitions > .container
+{
+	overflow: visible;
+}
+
+.qwerPanel > .container > *
 {
 	flex-shrink: 0;
 }
 
-.qwerPanel > .titleBar
+.qwerPanel > .container > .titleBar
 {
 	display: flex;
 	background-color: #424242;
@@ -125,7 +118,12 @@
 	cursor: move;
 }
 
-.qwerModal.fixed .qwerPanel .titleBar
+.qwerPanel > .container > .titleBar > .icon
+{
+	
+}
+
+.qwerModal.fixed > .qwerPanel > .container > .titleBar
 {
 	cursor: default;
 }
@@ -135,18 +133,12 @@ body.qwerPanelDragging
 	cursor: move !important;
 }
 
-.qwerPanel > .titleBar .icon
-{
-	font-size: 16px;
-	margin: -2px 8px -2px 0;
-}
-
-.qwerPanel > .titleBar .title
+.qwerPanel > .container > .titleBar .title
 {
 	flex: 1;
 }
 
-.qwerPanel > .titleBar button
+.qwerPanel > .container > .titleBar button
 {
 	width: 16px;
 	height: 16px;
@@ -162,17 +154,17 @@ body.qwerPanelDragging
 	margin: 0 0 0 6px;
 }
 
-.qwerPanel > .titleBar button:hover
+.qwerPanel > .container > .titleBar button:hover
 {
 	opacity: 1;
 }
 
-.qwerPanel > .titleBar button:active
+.qwerPanel > .container > .titleBar button:active
 {
 	opacity: 0.6;
 }
 
-.qwerPanel > .content
+.qwerPanel > .container > .content
 {
 	opacity: 0.95;
 	background-color: #fff;
@@ -182,16 +174,30 @@ body.qwerPanelDragging
 	flex-shrink: 1;
 }
 
-.qwerPanel.collapsed > .content
-{
-	height: 0 !important;
-	min-height: 0 !important;
-}
-
-.qwerPanel > .content.dragging
+.qwerPanel > .container > .content.dragging
 {
 	filter: blur(3px) grayscale(0.5);
 	opacity: 0.65;
+}
+
+.qwerAnchorPoint.flyout.transitions
+{
+	transition: top 188ms;
+}
+
+.qwerOverlay
+{
+	width: auto;
+	height: auto;
+	opacity: 0;
+	overflow: hidden;
+	position: relative;
+	box-shadow: rgba(0,0,0,0.13) 0px 1px 6px;
+}
+
+.qwerAnchorPoint.flyout.transitions > .qwerOverlay
+{
+	transition: opacity 200ms, width 150ms, left 150ms, height 188ms, top 188ms;
 }
 
 .qwerFlyout
@@ -200,6 +206,13 @@ body.qwerPanelDragging
 	position: absolute;
 	border: 1px solid #d0d0d0;
 	max-height: 100vh;
+	overflow: hidden;
+}
+
+.qwerMenu
+{
+	max-height: inherit;
+	max-width: inherit;
 	overflow: auto;
 }
 
@@ -343,7 +356,7 @@ body.qwerPanelDragging
 	margin: 1px 3px 1px 0;
 	background-color: #8fbde5;
 	color: #fff;
-	border-radius: 4px;
+	border-radius: 2px;
 	display: flex;
 }
 
@@ -360,6 +373,7 @@ body.qwerPanelDragging
 	outline: none;
 	border: none;
 	width: 0;
+	min-width: 0;
 	flex: 1;
 }
 

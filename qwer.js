@@ -5,12 +5,29 @@ $(function()
 	    var jan = new Date(this.getFullYear(), 0, 1);
 	    var jul = new Date(this.getFullYear(), 6, 1);
 	    return Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
-	}
+	};
 	
 	Date.prototype.isDstObserved = function()
 	{
 	    return this.getTimezoneOffset() < this.stdTimezoneOffset();
-	}
+	};
+	
+	const CHAR_ENTITY =
+	{
+		'&': '&amp;',
+		'<': '&lt;',
+		'>': '&gt;',
+		'"': '&quot;',
+		"'": '&#39;',
+		'/': '&#x2F;',
+		'`': '&#x60;',
+		'=': '&#x3D;'
+	};
+	
+	String.prototype.escapeHtml = function()
+	{
+		return this.replace(/[&<>"'`=\/]/g, s => CHAR_ENTITY[s]);
+	};
 	
 	$.qwer = function(e, bind)
 	{
@@ -112,6 +129,9 @@ $(function()
 		{
 			this.eventHandlers = { change: { event: 'change', handler: this.onChange, block: 1 } };
 			
+			if(options instanceof Array)
+				options = { form: 'form', controls: options };
+			
 			if( options.form && !(this instanceof QwerForm) )
 				return new QwerForm(target, options, parent);
 			else if( options.array && !(this instanceof QwerFormArray) )
@@ -121,6 +141,22 @@ $(function()
 			this.target = target;
 			this.options = options;
 			this.name = this.options.name || this.options.form || this.options.array;
+			
+			let methods = Object.keys(this.options)
+				.filter( e => this.options[e] && this.options[e].constructor == Function )
+				.map(    e => ({ name: e, method: this.options[e].bind(this) }) );
+			
+			this.method = {};
+			for(let m of methods)
+				this.method[m.name] = m.method;
+			
+			let data = Object.keys(this.options)
+				.filter( e => this.options[e] == null || this.options[e].constructor != Function )
+				.map(    e => ({ name: e, data: this.options[e] }) );
+			
+			this.data = {};
+			for(let d of data)
+				this.data[d.name] = d.data;
 			
 			if(this.options.init)
 				this.options.init.call(this);
@@ -136,6 +172,7 @@ $(function()
 			if(isQwerSelect)
 			{
 				this.qwerSelect = this.target.data('qwerSelect');
+				this.qwerSelect.formControl = this;
 				this.options.onChange = 
 					(function(otherOnChange, e)
 					{
@@ -224,22 +261,6 @@ $(function()
 			
 			if(isInput)
 				this.target.qwerChange();
-			
-			let methods = Object.keys(this.options)
-				.filter( e => this.options[e] && this.options[e].constructor == Function )
-				.map(    e => ({ name: e, method: this.options[e].bind(this) }) );
-			
-			this.method = {};
-			for(let m of methods)
-				this.method[m.name] = m.method;
-			
-			let data = Object.keys(this.options)
-				.filter( e => this.options[e] == null || this.options[e].constructor != Function )
-				.map(    e => ({ name: e, data: this.options[e] }) );
-			
-			this.data = {};
-			for(let d of data)
-				this.data[d.name] = d.data;
 			
 			this.changeCounter = 0;
 			
@@ -363,6 +384,9 @@ $(function()
 		
 		triggerChange()
 		{
+			if(this.eventHandlers.change.block > 0)
+				return;
+			
 			let c = this.changeCounter;
 			
 			if(this.target.length > 0)
@@ -662,248 +686,6 @@ $(function()
 		}
 	}
 	
-	class QwerPanel
-	{
-		constructor(target, options, name)
-		{
-			this.target = target;
-			this.options = options || {};
-			this.name = name || (this.options.name);
-			this.options.name = this.name;
-			this.panel = $('<div class="qwerPanel"></div');
-			this.titleBar = $('<div class="titleBar"></div>').appendTo(this.panel);
-			this.titleBar.mousedown( e => this.mouseDown(e) );
-			this.icon = $('<div class="icon"></div>').appendTo(this.titleBar);
-			this.title = $('<div class="title"></div>').appendTo(this.titleBar);
-			
-			this.caretIcon = $('<i class="fas fa-caret-up"></i>');
-			$('<button class="rollup"></button>')
-				.append(this.caretIcon)
-				.appendTo(this.titleBar)
-				.click( e => this.setCollapsed(!this.collapsed) );
-			
-			$('<button class="help"><i class="fas fa-question-circle"></i></button>')
-				.appendTo(this.titleBar);
-			
-			$('<button class="close"><i class="fas fa-times"></i></button>')
-				.appendTo(this.titleBar)
-				.click( e => this.setVisible(false) );
-			
-			this.content = $('<div class="content" style="flex:1"></div>').appendTo(this.panel);
-			
-			if(this.options.allowResize)
-			{
-				let n  = $(`<div class="resize n  "></div>`).mousedown( e => this.resizeMouseDown(e.clientX, e.clientY,  0, -1, e) );
-				let e  = $(`<div class="resize e  "></div>`).mousedown( e => this.resizeMouseDown(e.clientX, e.clientY,  1,  0, e) );
-				let s  = $(`<div class="resize s  "></div>`).mousedown( e => this.resizeMouseDown(e.clientX, e.clientY,  0,  1, e) );
-				let w  = $(`<div class="resize w  "></div>`).mousedown( e => this.resizeMouseDown(e.clientX, e.clientY, -1,  0, e) );
-				let nw = $(`<div class="resize n w"></div>`).mousedown( e => this.resizeMouseDown(e.clientX, e.clientY, -1, -1, e) );
-				let ne = $(`<div class="resize n e"></div>`).mousedown( e => this.resizeMouseDown(e.clientX, e.clientY,  1, -1, e) );
-				let se = $(`<div class="resize s e"></div>`).mousedown( e => this.resizeMouseDown(e.clientX, e.clientY,  1,  1, e) );
-				let sw = $(`<div class="resize s w"></div>`).mousedown( e => this.resizeMouseDown(e.clientX, e.clientY, -1,  1, e) );
-				
-				this.panel.append(n,e,s,w,nw,ne,se,sw);
-			}
-			
-			this.target.data(`qwerPanel${this.name ? `.${this.name}` : ''}`, this);
-			
-			this.setOptions(options);
-		}
-		
-		setOptions(options)
-		{
-			this.options = options || this.options;
-			
-			if(this.options.modal || this.options.fixedModal)
-				this.base = $(`<div class="qwerModal ${this.options.fixedModal ? 'fixed' : ''}"></div>`).append( this.panel.detach() );
-			else
-				this.base = this.panel.detach();
-			
-			this.setVisible(this.options.visible, true);
-			delete this.options.visible;
-			
-			this.setCollapsed(!!this.options.collapsed, true);
-			delete this.options.collapsed;
-			
-			if(this.options.minWidth)
-				this.content.css('min-width', this.options.minWidth);
-			if(this.options.minHeight)
-				this.content.css('min-height', this.options.minHeight);
-			
-			this.setPosition({left: 10, top: 10});
-			this.restorePosition();
-			
-			this.title.text(this.options.title);
-			this.icon.empty().append(`<i class="fas fa-${this.options.iconName}"></i>`);
-		}
-		
-		setTitle(title)
-		{
-			this.options.title = title;
-			this.title.text(this.options.title);
-		}
-		
-		setVisible(set, force)
-		{
-			if(set == null)
-				set = true;
-			
-			if(this.visible == !!set && !force)
-				return;
-			
-			this.visible = !!set;
-			this.setCollapsed(false);
-			
-			if(this.visible)
-			{
-				this.content.children().detach();
-				this.content.append( $.qwer(this.options.content) );
-				
-				this.base.appendTo(this.target);
-				this.content.findFocusable().first().focus();
-				
-				this.target.trigger('qwerPanel.show');
-			}
-			else
-			{
-				this.base.detach();
-				
-				this.target.trigger('qwerPanel.hide');
-			}
-		}
-		
-		setCollapsed(set, force)
-		{
-			if(set == null)
-				set = true;
-			
-			if(this.collapsed == !!set && !force)
-				return;
-			
-			this.collapsed = !!set;
-			
-			this.caretIcon.addClass(this.collapsed ? 'fa-caret-down' : 'fa-caret-up');
-			this.caretIcon.removeClass(!this.collapsed ? 'fa-caret-down' : 'fa-caret-up');
-			
-			if(this.collapsed)
-				this.panel.addClass('collapsed');
-			else
-				this.panel.removeClass('collapsed');
-		}
-		
-		mouseDown(e)
-		{
-			if(this.options.fixedModal)
-				return;
-			
-			$(document).one( 'mouseup', e => this.mouseUp(e) );
-			
-			let x = this.panel.position().left;
-			let y = this.panel.position().top;
-			this.mouseMoveHandler = this.mouseMove.bind(this, x, y, e.screenX, e.screenY);
-			$(document).mousemove(this.mouseMoveHandler);
-		}
-		
-		mouseUp(e)
-		{
-			$(document).off('mousemove', this.mouseMoveHandler);
-			this.content.removeClass('dragging');
-			$(document.body).removeClass('qwerPanelDragging');
-			this.dragging = false;
-		}
-		
-		mouseMove(x, y, x_, y_, e)
-		{
-			e.preventDefault();
-			
-			if(!this.dragging)
-			{
-				if(Math.sqrt(Math.pow(e.screenX-x_,2) + Math.pow(e.screenY-y_,2)) < 4)
-					return;
-				
-				this.dragging = true;
-				this.content.addClass('dragging');
-				$(document.body).addClass('qwerPanelDragging');
-			}
-			
-			let clampX = Math.max(0, x+e.screenX-x_);
-			clampX = Math.min( clampX, this.panel.parent().outerWidth()-this.titleBar.outerWidth() );
-			
-			let clampY = Math.max(0, y+e.screenY-y_);
-			clampY = Math.min( clampY, this.panel.parent().outerHeight()-this.titleBar.outerHeight() );
-			
-			this.panel.css('left', clampX);
-			this.panel.css('top', clampY);
-			
-			this.savePosition();
-		}
-		
-		resizeMouseDown(xClick, yClick, xFactor, yFactor, e)
-		{
-			e.preventDefault();
-			
-			this.resizingHandler = this.resizeMouseMove.bind(
-				this, xClick, yClick, xFactor, yFactor, 
-				this.panel.position().left, this.panel.position().top, 
-				this.content.outerWidth(), this.content.outerHeight());
-			
-			$(document).mousemove(this.resizingHandler);
-			$(document).one( 'mouseup', e => $(document).off('mousemove', this.resizingHandler) );
-		}
-		
-		resizeMouseMove(xClick, yClick, xFactor, yFactor, fromX, fromY, fromW, fromH, e)
-		{
-			e.preventDefault();
-			
-			let wChange = (e.clientX-xClick) * xFactor;
-			let hChange = (e.clientY-yClick) * yFactor;
-			let w = fromW + wChange;
-			let h = fromH + hChange;
-			let x = fromX - wChange;
-			let y = fromY - hChange;
-			
-			this.content.css({ width: w, height: h });
-			
-			if(xFactor < 0)
-				this.panel.css( 'left', fromX+fromW-this.panel.outerWidth() );
-			if(yFactor < 0)
-				this.panel.css( 'top', fromY+fromH-this.panel.outerHeight()+this.titleBar.outerHeight() );
-		}
-		
-		savePosition()
-		{
-			if(this.name == null)
-				return;
-			
-			clearTimeout(this.saveTimeout);
-			this.saveTimeout = setTimeout( () => 
-			{
-				let {left, top} = this.panel.position();
-				document.cookie = `qwerPanel.${this.name}.x=${left}`;
-				document.cookie = `qwerPanel.${this.name}.y=${top}`;
-			}, 300);
-		}
-		
-		restorePosition()
-		{
-			if(this.name == null)
-				return;
-
-			let xMatch = new RegExp(`(?:^|; *)qwerPanel\\.${this.name}\\.x=(\\d+)(?:;|$)`).exec(document.cookie);
-			let yMatch = new RegExp(`(?:^|; *)qwerPanel\\.${this.name}\\.y=(\\d+)(?:;|$)`).exec(document.cookie);
-			
-			this.setPosition({ left: xMatch && xMatch[1], top: yMatch && yMatch[1] });
-		}
-		
-		setPosition({left, top})
-		{
-			if(left != null)
-				this.panel.css('left', Number(left) );
-			if(top != null)
-				this.panel.css('top',  Number(top) );
-		}
-	}
-	
 	class QwerTreeItem
 	{
 		constructor(target, options, depth)
@@ -1016,6 +798,8 @@ $(function()
 				
 				for( let treeItem of this.children.map(e => e.qwerTreeItem).reverse() )
 					treeItem.setVisible(true, this.target);
+				
+				this.target.trigger('qwerTreeItem.expand');
 			}
 			else
 			{
@@ -1023,49 +807,516 @@ $(function()
 				
 				for(let child of this.children)
 					child.qwerTreeItem.setVisible(false, this.target);
+				
+				this.target.trigger('qwerTreeItem.collapse');
 			}
 		}
 	}
 	
-	class QwerFlyout
+	const Z_SORTED_OBJECTS = [];
+	__DEBUG_Z_SORTED_OBJECTS = Z_SORTED_OBJECTS;
+	
+	class QwerZSorted
+	{
+		constructor(element, alwaysOnTop)
+		{
+			this._alwaysOnTop = !!alwaysOnTop;
+			this._zElement = element || $();
+			Z_SORTED_OBJECTS.push(this);
+			this._updateZIndices();
+		}
+		
+		_updateZIndices()
+		{
+			for(let i=0, l=Z_SORTED_OBJECTS.length; i<l; i++)
+			{
+				let item = Z_SORTED_OBJECTS[i];
+				item._zElement.css('z-index', (item._alwaysOnTop ? l : i) + 999)
+			}
+		}
+		
+		sendToTop()
+		{
+			Z_SORTED_OBJECTS.splice(this._zIndex-999, 1);
+			Z_SORTED_OBJECTS.push(this);
+			this._updateZIndices();
+		}
+		
+		dispose()
+		{
+			Z_SORTED_OBJECTS.splice(this._zIndex-999, 1);
+			this._updateZIndices();
+		}
+	}
+	
+	class QwerPanel extends QwerZSorted
+	{
+		constructor(target, options, name)
+		{
+			super();
+			
+			this.target = target;
+			this.options = options || {};
+			this.name = name || (this.options.name);
+			this.options.name = this.name;
+			this.panel = $('<div class="qwerPanel"></div');
+			this.container = $('<div class="container"></div').appendTo(this.panel);
+			this.titleBar = $('<div class="titleBar"></div>').appendTo(this.container);
+			this.titleBar.mousedown( e => this.onTitleBarMouseDown(e) );
+			this.icon = $('<div class="icon"></div>').appendTo(this.titleBar);
+			this.title = $('<div class="title"></div>').appendTo(this.titleBar);
+			
+			this.panel[0].addEventListener('mousedown', e => this.onMouseDown(e), true);
+			
+			this.caretIcon = $('<i class="fas fa-caret-up"></i>');
+			$('<button class="rollup"></button>')
+				.append(this.caretIcon)
+				.appendTo(this.titleBar)
+				.click( e => this.setCollapsed(!this.collapsed) );
+			
+			$('<button class="help"><i class="fas fa-question-circle"></i></button>')
+				.appendTo(this.titleBar);
+			
+			$('<button class="close"><i class="fas fa-times"></i></button>')
+				.appendTo(this.titleBar)
+				.click( e => this.setVisible(false) )
+				.click( e => this.options.onClose && this.options.onClose.call(this) );
+			
+			this.content = $('<div class="content"></div>').appendTo(this.container);
+			
+			let n  = $(`<div class="resize n  "></div>`).mousedown( e => this.onResizeMouseDown(e.clientX, e.clientY,  0, -1, e) );
+			let e  = $(`<div class="resize e  "></div>`).mousedown( e => this.onResizeMouseDown(e.clientX, e.clientY,  1,  0, e) );
+			let s  = $(`<div class="resize s  "></div>`).mousedown( e => this.onResizeMouseDown(e.clientX, e.clientY,  0,  1, e) );
+			let w  = $(`<div class="resize w  "></div>`).mousedown( e => this.onResizeMouseDown(e.clientX, e.clientY, -1,  0, e) );
+			let nw = $(`<div class="resize n w"></div>`).mousedown( e => this.onResizeMouseDown(e.clientX, e.clientY, -1, -1, e) );
+			let ne = $(`<div class="resize n e"></div>`).mousedown( e => this.onResizeMouseDown(e.clientX, e.clientY,  1, -1, e) );
+			let se = $(`<div class="resize s e"></div>`).mousedown( e => this.onResizeMouseDown(e.clientX, e.clientY,  1,  1, e) );
+			let sw = $(`<div class="resize s w"></div>`).mousedown( e => this.onResizeMouseDown(e.clientX, e.clientY, -1,  1, e) );
+			
+			this.panel.append(n,e,s,w,nw,ne,se,sw);
+		
+			if(this.name == null)
+			{
+				let i = (this.target.data('qwerPanelUntitledIndex') || 0) + 1;
+				this.target.data('qwerPanelUntitledIndex', i);
+				this.name = 'qwerPanelUntitled' + i;
+				this.untitled = true;
+			}
+			
+			this.target.data(`qwerPanel.${this.name}`, this);
+			
+			this.setOptions(options);
+			
+			this.panel.on('transitionend', () => 
+			{
+				if(this.collapseStateChanging)
+				{
+					this.collapseStateChanging = false;
+					this.panel.removeClass('transitions');
+					if(!this.collapsed)
+						this.panel.css('height', '');
+				}
+			});
+		}
+		
+		dispose()
+		{
+			this.setVisible(false);
+			this.panel.remove();
+			this.target.data(`qwerPanel.${this.name}`, null);
+			this.target = null;
+			this.content = null;
+			
+			super.dispose();
+		}
+		
+		setOptions(options, extend)
+		{
+			if(extend)
+				options = $.extend({}, this.options, options);
+			
+			this.options = options || this.options;
+			
+			if(this.options.modal || this.options.fixedModal)
+				this.base = $(`<div class="qwerModal ${this.options.fixedModal ? 'fixed' : ''}"></div>`).append( this.panel.detach() );
+			else
+				this.base = this.panel.detach();
+			
+			this._zElement = this.base;
+			
+			if(this.options.allowResize)
+				this.panel.addClass('resizeable');
+			else
+				this.panel.removeClass('resizeable');
+			
+			this.setVisible(this.options.visible, true);
+			delete this.options.visible;
+			
+			this.setCollapsed(!!this.options.collapsed, true);
+			delete this.options.collapsed;
+			
+			this.content.css('width',      this.options.width     || '');
+			this.content.css('height',     this.options.height    || '');
+			this.content.css('min-width',  this.options.minWidth  || '100%');
+			this.content.css('min-height', this.options.minHeight || '100%');
+			this.content.css('max-width',  this.options.maxWidth  || '');
+			this.content.css('max-height', this.options.maxHeight || '');
+			
+			this.setPosition(
+			{
+				left: this.options.left == null ? 10 : this.options.left, 
+				top:  this.options.top  == null ? 10 : this.options.top
+			});
+			
+			this.restorePosition();
+			
+			this.setTitle(this.options.title);
+			this.icon.empty().append( $.qwer(this.options.icon) );
+		}
+		
+		setTitle(title)
+		{
+			this.options.title = title;
+			this.title.children().detach();
+			this.title.empty().append( $.qwer(this.options.title) );
+		}
+		
+		setVisible(set, init)
+		{
+			if(set == null)
+				set = true;
+			
+			if(this.visible == !!set && !init)
+				return;
+			
+			this.visible = !!set;
+			this.setCollapsed(false, init);
+			
+			if(this.visible)
+			{
+				this.content.children().detach();
+				this.content.append( $.qwer(this.options.content) );
+				
+				this.base.appendTo(this.target);
+				this.content.findFocusable().first().focus();
+				
+				this.sendToTop();
+				
+				this.target.trigger('qwerPanel.show');
+			}
+			else
+			{
+				this.base.detach();
+				
+				this.target.trigger('qwerPanel.hide');
+			}
+		}
+		
+		setCollapsed(set, init)
+		{
+			if(set == null)
+				set = true;
+			
+			if(this.collapsed == !!set && !init)
+				return;
+			
+			this.collapsed = !!set;
+			
+			this.caretIcon.addClass(this.collapsed ? 'fa-caret-down' : 'fa-caret-up');
+			this.caretIcon.removeClass(!this.collapsed ? 'fa-caret-down' : 'fa-caret-up');
+			
+			this.collapseStateChanging = !init;
+			
+			if(this.collapsed)
+			{
+				this.panel
+					.addClass('collapsed')
+					.css( 'height', this.titleBar.outerHeight() + this.content.outerHeight() )
+					.addClass(init ? '' : 'transitions')
+					.css( 'height', this.titleBar.outerHeight() );
+			}
+			else if(this.collapseStateChanging)
+			{
+				this.panel.removeClass('collapsed').css('height', '');
+				
+				let targetHeight = this.panel.outerHeight();
+				
+				this.panel
+					.css( 'height', this.titleBar.outerHeight() )
+					.addClass('transitions')
+					.css('height', targetHeight);
+			}
+		}
+		
+		onMouseDown()
+		{
+			this.sendToTop();
+		}
+		
+		onTitleBarMouseDown(e)
+		{
+			this.sendToTop();
+			
+			if(this.options.fixedModal)
+				return;
+			
+			$(document).one( 'mouseup', e => this.onTitleBarMouseUp(e) );
+			
+			let x = this.panel.position().left;
+			let y = this.panel.position().top;
+			this.mouseMoveHandler = this.onTitleBarMouseMove.bind(this, x, y, e.screenX, e.screenY);
+			$(document).mousemove(this.mouseMoveHandler);
+		}
+		
+		onTitleBarMouseUp(e)
+		{
+			if(this.mouseMoveHandler)
+				$(document).off('mousemove', this.mouseMoveHandler);
+			
+			this.content.removeClass('dragging');
+			$(document.body).removeClass('qwerPanelDragging');
+			this.dragging = false;
+		}
+		
+		onTitleBarMouseMove(x, y, x_, y_, e)
+		{
+			e.preventDefault();
+			
+			if(!this.dragging)
+			{
+				if(Math.sqrt(Math.pow(e.screenX-x_,2) + Math.pow(e.screenY-y_,2)) < 4)
+					return;
+				
+				this.dragging = true;
+				this.content.addClass('dragging');
+				$(document.body).addClass('qwerPanelDragging');
+			}
+			
+			let clampX = Math.max(0, x+e.screenX-x_);
+			clampX = Math.min( clampX, this.panel.parent().outerWidth()-this.titleBar.outerWidth() );
+			
+			let clampY = Math.max(0, y+e.screenY-y_);
+			clampY = Math.min( clampY, this.panel.parent().outerHeight()-this.titleBar.outerHeight() );
+			
+			this.panel.css('left', clampX);
+			this.panel.css('top', clampY);
+			
+			this.savePosition();
+		}
+		
+		onResizeMouseDown(xClick, yClick, xFactor, yFactor, e)
+		{
+			e.preventDefault();
+			
+			this.resizingHandler = this.onResizeMouseMove.bind(
+				this, xClick, yClick, xFactor, yFactor, 
+				this.panel.position().left, this.panel.position().top, 
+				this.content.outerWidth(), this.content.outerHeight());
+			
+			$(document).mousemove(this.resizingHandler);
+			$(document).one( 'mouseup', e => $(document).off('mousemove', this.resizingHandler) );
+		}
+		
+		onResizeMouseMove(xClick, yClick, xFactor, yFactor, fromX, fromY, fromW, fromH, e)
+		{
+			e.preventDefault();
+			
+			let wChange = (e.clientX-xClick) * xFactor;
+			let hChange = (e.clientY-yClick) * yFactor;
+			
+			if(wChange != 0)
+				this.content.css({ width: fromW + wChange });
+			if(hChange != 0)
+				this.content.css({ height: fromH + hChange });
+			
+			if(xFactor < 0)
+				this.panel.css( 'left', fromX+fromW-this.panel.outerWidth() );
+			if(yFactor < 0)
+				this.panel.css( 'top', fromY+fromH-this.panel.outerHeight()+this.titleBar.outerHeight() );
+		}
+		
+		savePosition()
+		{
+			if(this.untitled)
+				return;
+			
+			clearTimeout(this.saveTimeout);
+			this.saveTimeout = setTimeout( () => 
+			{
+				let {left, top} = this.panel.position();
+				document.cookie = `qwerPanel.${this.name}.x=${left}`;
+				document.cookie = `qwerPanel.${this.name}.y=${top}`;
+			}, 300);
+		}
+		
+		restorePosition()
+		{
+			if(this.untitled)
+				return;
+
+			let xMatch = new RegExp(`(?:^|; *)qwerPanel\\.${this.name}\\.x=(\\d+)(?:;|$)`).exec(document.cookie);
+			let yMatch = new RegExp(`(?:^|; *)qwerPanel\\.${this.name}\\.y=(\\d+)(?:;|$)`).exec(document.cookie);
+			
+			this.setPosition({ left: xMatch && xMatch[1], top: yMatch && yMatch[1] });
+		}
+		
+		setPosition({left, top})
+		{
+			if(left != null)
+				this.panel.css('left', Number(left) );
+			if(top != null)
+				this.panel.css('top',  Number(top) );
+		}
+	}
+	
+	class QwerFlyout extends QwerZSorted
 	{
 		constructor(target, options)
 		{
-			this.anchorPoint = $('<div class="qwerAnchorPoint"></div>');
+			let anchorPoint = $('<div class="qwerAnchorPoint flyout"></div>');
+			
+			super(anchorPoint, true);
+			
+			this.anchorPoint = anchorPoint;
 			
 			this.target = target
-				.mousedown( e => this.mouseDown(e) );
+				.mousedown( e => this.onMouseDown(e) );
 			
 			this.target[0].tabIndex = 0;
 			
+			this.overlay = $('<div class="qwerOverlay"></div>')
+				.appendTo(this.anchorPoint);
+			
 			this.flyout = $('<div class="qwerFlyout"></div')
-				.appendTo(this.anchorPoint)
-				.mousedown( e => this.mouseDown(e) );
+				.appendTo(this.overlay)
+				.mousedown( e => this.onMouseDown(e) );
 			
 			this.setOptions(options);
 			
 			this.visible = false;
 			
-			if(!this.options.externallyControlled)
-				this.target.click( e => this.setVisible(!this.visible) )
-			
 			this.target.data('qwerFlyout', this);
+			
+			this.overlay.on('transitionend', () => 
+			{
+				if(this.visible == false)
+				{
+					this.inHideTransition = false;
+					this.target.removeClass('qwerFlyoutVisible');
+					this.anchorPoint.detach();
+				}
+			});
 		}
 		
-		setOptions(options)
+		setOptions(options, extend)
 		{
-			this.options = options;
+			if(extend)
+				options = $.extend({}, this.options, options);
+			
+			this.options = options || {};
 			
 			if(this.content)
 				this.content.detach();
 			
-			if(this.options != null)
+			this.content = $.qwer(this.options.content);
+			this.flyout.append(this.content);
+			
+			if(this.clickHandler)
+				this.target.off('click', this.clickHandler);
+			
+			if(!this.options.externallyControlled)
 			{
-				this.content = $.qwer(this.options);
-				this.flyout.append(this.content);
+				this.clickHandler = e => this.setVisible(!this.visible);
+				this.target.click(this.clickHandler);
 			}
 			
 			requestAnimationFrame( () => this.updatePositioning() );
+		}
+		
+		setVisible(set)
+		{
+			if(this.inHideTransition)
+				return;
+			
+			if(set == null)
+				set = true;
+			
+			if(this.visible == !!set)
+				return;
+			
+			this.visible = !!set;
+			
+			if(this.visible)
+			{
+				this.windowResizeHandler = this.updatePositioning.bind(this);
+				$(window).on('resize', this.windowResizeHandler)
+				
+				this.sendToTop();
+				
+				
+				this.target.addClass('qwerFlyoutVisible');
+				
+				this.anchorPoint
+					.removeClass('transitions')
+					.appendTo(document.body);
+				
+				requestAnimationFrame( () => 
+				{
+					$(document).one('mousedown', e => this.documentMouseDown(e));
+					this.target.trigger('qwerFlyout.show');
+					
+					this.updatePositioning();
+					
+					let anchorTop = this.anchorPoint.offset().top;
+					
+					if(this.usingTop)
+						this.anchorPoint.css( 'top', anchorTop + this.target.outerHeight() );
+					else
+						this.anchorPoint.css( 'top', anchorTop - this.target.outerHeight() );
+					
+					this.overlay.css(
+					{
+						width: this.flyout.outerWidth()/2, 
+						left: this.flyout.outerWidth()/4, 
+						height: this.flyout.outerHeight()/2,
+						opacity: 0
+					});
+					
+					this.anchorPoint.addClass('transitions').css('top', anchorTop);
+					
+					this.overlay.css(
+					{
+						width: this.flyout.outerWidth(), 
+						left: 0, 
+						height: this.flyout.outerHeight(),
+						opacity: 1
+					});
+				});
+			}
+			else
+			{
+				if(this.windowResizeHandler)
+					$(window).off('resize', this.windowResizeHandler);
+				
+				requestAnimationFrame( () => this.target.trigger('qwerFlyout.hide') );
+				
+				this.inHideTransition = true;
+				
+				let anchorTop = this.anchorPoint.offset().top;
+				
+				if(this.usingTop)
+					this.anchorPoint.css( 'top', anchorTop + this.flyout.outerHeight()*9/16 );
+				else
+					this.anchorPoint.css( 'top', anchorTop - this.target.outerHeight() );
+				
+				this.overlay.css(
+				{
+					width: this.flyout.outerWidth()/2, 
+					left: this.flyout.outerWidth()/4, 
+					height: this.flyout.outerHeight()/2, 
+					opacity: 0
+				});
+			}
 		}
 		
 		updatePositioning()
@@ -1074,7 +1325,7 @@ $(function()
 				return;
 			
 			let anchorProps = { left: this.target.offset().left, top: this.target.offset().top + this.target.outerHeight() };
-			let flyoutProps   = { /*width: '', maxWidth: '',*/ minWidth: '', maxHeight: '' };
+			let flyoutProps = { /* width: '', maxWidth: '', */ minWidth: '', maxHeight: '' };
 			
 			this.anchorPoint.css(anchorProps);
 			this.flyout.css(flyoutProps);
@@ -1082,15 +1333,16 @@ $(function()
 			if(this.options.matchWidth)
 			{
 				flyoutProps.minWidth = this.target.outerWidth();
-				//flyoutProps.width = this.target.outerWidth();
-				//flyoutProps.maxWidth = flyoutProps.width;
-				//flyoutProps.minWidth = flyoutProps.width;
+				// flyoutProps.width = this.target.outerWidth();
+				// flyoutProps.maxWidth = flyoutProps.width;
+				// flyoutProps.minWidth = flyoutProps.width;
 			}
 			
 			if(this.options.preferRight)
 				anchorProps.left += this.target.outerWidth() - this.flyout.outerWidth();
 			
 			let margin = 4;
+			this.usingTop = this.options.preferTop;
 			
 			if(anchorProps.left < margin)
 				anchorProps.left = margin;
@@ -1102,9 +1354,9 @@ $(function()
 			
 			if( this.options.noCover && (anchorProps.top < margin || anchorProps.top + this.flyout.outerHeight() > window.innerHeight - margin) )
 			{
-				let useTop = this.target.offset().top > window.innerHeight - this.target.offset().top - this.target.outerHeight() - margin;
+				this.usingTop = this.target.offset().top > window.innerHeight - this.target.offset().top - this.target.outerHeight() - margin;
 				
-				if(useTop)
+				if(this.usingTop)
 				{
 					anchorProps.top = Math.max(this.target.offset().top - this.flyout.outerHeight(), margin);
 					flyoutProps.maxHeight = this.target.offset().top - margin;
@@ -1112,7 +1364,7 @@ $(function()
 				else
 				{
 					anchorProps.top = this.target.offset().top + this.target.outerHeight();
-					flyoutProps.maxHeight = window.innerHeight - anchorProps.top;
+					flyoutProps.maxHeight = window.innerHeight - anchorProps.top - margin;
 				}
 			}
 			else if(anchorProps.top < margin)
@@ -1126,41 +1378,7 @@ $(function()
 			
 			this.anchorPoint.css(anchorProps);
 			this.flyout.css(flyoutProps);
-		}
-		
-		setVisible(set)
-		{
-			if(set == null)
-				set = true;
-			
-			if(this.visible == !!set)
-				return;
-			
-			this.visible = !!set;
-			
-			if(this.visible)
-			{
-				this.target.addClass('qwerFlyoutVisible');
-				this.anchorPoint.appendTo(document.body);
-				
-				requestAnimationFrame( () => this.updatePositioning() );
-				requestAnimationFrame( () => $(document).one('mousedown', e => this.documentMouseDown(e)) );
-				
-				this.windowResizeHandler = this.updatePositioning.bind(this);
-				$(window).on('resize', this.windowResizeHandler)
-
-				requestAnimationFrame( () => this.target.trigger('qwerFlyout.show') );
-			}
-			else
-			{
-				this.target.removeClass('qwerFlyoutVisible');
-				this.anchorPoint.detach();
-				
-				if(this.windowResizeHandler)
-					$(window).off('resize', this.windowResizeHandler)
-				
-				requestAnimationFrame( () => this.target.trigger('qwerFlyout.hide') );
-			}
+			this.overlay.css({ width: this.flyout.outerWidth(), height: this.flyout.outerHeight() });
 		}
 		
 		documentMouseDown()
@@ -1171,37 +1389,33 @@ $(function()
 				$(document).one( 'mousedown', e => this.documentMouseDown(e) );
 		}
 		
-		mouseDown()
+		onMouseDown()
 		{
 			this.mouseIsDown = true;
 			$(document).one('mouseup', e => requestAnimationFrame(() => this.mouseIsDown = false) );
 		}
 	}
 	
-	class QwerMenu extends QwerFlyout
+	class QwerMenu
 	{
 		constructor(target, options)
 		{
-			if(options && options.constructor == Array)
-				options = { items: options };
-			
-			super(target, options);
-			
-			this.menu = this.flyout
-				.addClass('qwerMenu')
+			this.target = target;
+			this.menu = $('<div class="qwerMenu"></div>')
 				.mousemove( e => this.setPreselectedIndex(null) );
 			
-			this.menuInitReady = true;
+			this.flyout = new QwerFlyout(target);
 			this.setOptions(options);
 			
 			this.target
 				.data('qwerMenu', this)
-				.keydown( e => this.keyDown(e) );
+				.keydown( e => this.keyDown(e) )
+				.on( 'qwerFlyout.show qwerFlyout.hide', e => this.flyoutVisibilityChanged() );
 		}
 		
 		keyDown(e)
 		{
-			if(this.visible)
+			if(this.flyout.visible)
 			{
 				if(e.key == 'ArrowDown' || e.key == 'ArrowUp')
 				{
@@ -1269,104 +1483,206 @@ $(function()
 			this.target.focus();
 		}
 		
-		setOptions(options)
+		setOptions(options, extend)
 		{
-			if(this.menuInitReady != true)
-			{
-				super.setOptions(options);
-				return;
-			}
+			if(extend)
+				options = $.extend({}, this.options, options);
 			
 			this.options = options || {};
 			
 			if(this.options.constructor == Array)
 				this.options = { items: this.options };
 			
+			this.flyout.setOptions( $.extend({ content: this.menu }, this.options) );
 			this.updateItems();
 		}
 		
 		updateItems()
 		{
 			let options = this.options;
-			let items = options.items;
+			let items = options.items || [];
 			
-			while(typeof items == 'function')
+			while(items instanceof Function)
 				items = items();
 			
-			if( $.qwerEq(this.items, items) )
-				return;
+			if( !(items instanceof Promise) )
+				items = Promise.resolve(items);
 			
-			this.menu.children().detach();
-			this.items = items;
-			
-			for(let i=0; i<this.items.length; i++)
+			items.then( items => 
 			{
-				let item = this.items[i];
-				if(typeof item.valueOf() != 'object')
-					this.items[i] = item = { html: item };
+				if( $.qwerEq(this.items, items) )
+					return;
 				
-				if(item.element == null)
+				this.menu.children().detach();
+				this.items = items;
+				
+				for(let i=0; i<this.items.length; i++)
 				{
-					let html = $.qwer(item);
+					let item = this.items[i];
+					if(typeof item.valueOf() != 'object')
+						this.items[i] = item = { html: item };
 					
-					if(html.is('hr') || item.separator)
+					if(item.element == null)
 					{
-						html = $('<hr>');
-						item.separator = true;
-					}
-					else if(item.section)
-					{
-						html = $('<div class="menuSection"></div>').append(html);
-						item.noClose = true;
-					}
-					else
-					{
-						html = $('<div class="menuItem"></div>').append(html);
+						let html = $.qwer(item);
+						
+						if(html.is('hr') || item.separator)
+						{
+							html = $('<hr>');
+							item.separator = true;
+						}
+						else if(item.section)
+						{
+							html = $('<div class="menuSection"></div>').append(html);
+							item.noClose = true;
+						}
+						else
+						{
+							html = $('<div class="menuItem"></div>').append(html);
+						}
+						
+						if(item.disabled || html.attr('disabled') != null)
+						{
+							html.attr('disabled', '');
+							item.disabled = true;
+						}
+						
+						html.click( this.selectItem.bind(this, item) );
+						
+						item.element = html;
 					}
 					
-					if(item.disabled || html.attr('disabled') != null)
-					{
-						html.attr('disabled', '');
-						item.disabled = true;
-					}
-					
-					html.click( this.selectItem.bind(this, item) );
-					
-					item.element = html;
+					this.menu.append(item.element);
 				}
 				
-				this.menu.append(item.element);
-			}
-			
-			this.setPreselectedIndex(null);
-			requestAnimationFrame( () => this.updatePositioning() );
+				this.setPreselectedIndex(null);
+				requestAnimationFrame( () => this.flyout.updatePositioning() );
+			});
 		}
 		
-		setVisible(set)
+		flyoutVisibilityChanged()
 		{
-			if(set == null)
-				set = true;
-			
-			if(this.visible == !!set)
-				return;
-			
-			super.setVisible(set);
-			
 			this.setPreselectedIndex(null);
 			
-			if(this.visible)
+			if(this.flyout.visible)
 			{
 				if(this.items == null || typeof this.options.items == 'function')
 					this.updateItems();
 				
 				this.target.addClass('qwerMenuVisible');
-				requestAnimationFrame( () => this.target.trigger('qwerMenu.show') );
+				this.target.trigger('qwerMenu.show');
 			}
 			else
 			{
 				this.target.removeClass('qwerMenuVisible');
-				requestAnimationFrame( () => this.target.trigger('qwerMenu.hide') );
+				this.target.trigger('qwerMenu.hide');
 			}
+		}
+		
+		setVisible(set)
+		{
+			this.flyout.setVisible(set);
+		}
+		
+		get visible()
+		{
+			return this.flyout.visible;
+		}
+	}
+	
+	class QwerContextMenu
+	{
+		constructor(target, options)
+		{
+			this.target = target;
+			this.anchorPoint = $('<div class="qwerAnchorPoint"></div>')
+				.on( 'qwerMenu.show qwerMenu.hide', e => this.menuVisibilityChanged() );
+			
+			this.menu = new QwerMenu(this.anchorPoint);
+			this.setOptions(options);
+			
+			this.target
+				.data('qwerContextMenu', this)
+				.mousedown( e => this.onMouseDown(e) )
+				.mouseup( e => this.onMouseUp(e) )
+				.contextmenu( e => this.onContextMenu(e) );
+		}
+		
+		onMouseDown(e)
+		{
+			if(e.which == 3)
+				this.mouseDownTime = Date.now();
+		}
+		
+		onMouseUp(e)
+		{
+			if(e.which == 3 && Date.now() - this.mouseDownTime > 850)
+				this.nativeContextMenu = true;
+		}
+		
+		onContextMenu(e)
+		{
+			if(this.options.externallyControlled)
+				return;
+			
+			if(this.nativeContextMenu)
+			{
+				this.nativeContextMenu = false;
+			}
+			else
+			{
+				e.preventDefault();
+				this.setVisible(true, e.clientX, e.clientY);
+				this.mouseUpTriggered = true;
+			}
+		}
+		
+		setOptions(options, extend)
+		{
+			if(extend)
+				options = $.extend({}, this.options, options);
+			
+			this.options = options || {};
+			
+			if(this.options.constructor == Array)
+				this.options = { items: this.options };
+			
+			this.menu.setOptions(this.options);
+		}
+		
+		menuVisibilityChanged()
+		{
+			if(this.menu.visible)
+			{
+				this.anchorPoint.appendTo(document.body);
+				this.menu.flyout.updatePositioning();
+				
+				this.target.addClass('qwerContextMenuVisible');
+				this.target.trigger('qwerContextMenu.show');
+			}
+			else
+			{
+				this.anchorPoint.detach();
+				
+				this.target.removeClass('qwerContextMenuVisible');
+				this.target.trigger('qwerContextMenu.hide');
+			}
+		}
+		
+		setVisible(set, x, y)
+		{
+			this.anchorPoint.css(
+			{
+				left: x || 0,
+				top:  y || 0
+			});
+			
+			this.menu.setVisible(set);
+		}
+		
+		get visible()
+		{
+			return this.menu.visible;
 		}
 	}
 	
@@ -1408,10 +1724,16 @@ $(function()
 					.keydown( e => 
 					{
 						if( (e.key == ' ' && this.filter.val().trim() == '') || e.key == 'ArrowUp' || e.key == 'ArrowDown' )
+						{
 							e.preventDefault();
-						else if(e.key == 'Backspace' && this.filter.val() == '' && this.selectedOptions.length > 0)
+						}
+						else if(!this.bspDown && e.key == 'Backspace' && this.filter.val() == '' && this.selectedOptions.length > 0)
+						{
 							this.unselectOption(this.selectedOptions[this.selectedOptions.length-1]);
+							this.bspDown = true;
+						}
 					})
+					.keyup( e => e.key == 'Backspace' && (this.bspDown = false) )
 					.qwerChange( () => this.filterChanged(), 0 );
 				
 				this.box.on( 'mousedown focus', e => this.filter.focus() );
@@ -1444,7 +1766,7 @@ $(function()
 				})
 				.prop('tabIndex', this.options.filter ? -1 : 0)
 				.one( 'qwerMenu.show', e => this.placeholder.css('position', '') )
-				//.on( 'qwerMenu.show', e => this.updateSize() )
+				// .on( 'qwerMenu.show', e => this.updateSize() )
 				.on( 'qwerMenu.hide', e => this.hideFilter() )
 				.data('qwerMenu');
 			
@@ -1463,7 +1785,7 @@ $(function()
 		
 		onBlur()
 		{
-			if(this.menu.mouseIsDown)
+			if(this.menu.flyout.mouseIsDown)
 				return;
 			
 			this.box.removeClass('filterFocused');
@@ -1494,7 +1816,7 @@ $(function()
 			else
 			{
 				this.predefinedOptions = Array.from( this.target.find('option') )
-					.filter(e => !!e.value)
+					.filter(e => !!e.value || !e.disabled)
 					.map( e => ({ html: $(e).text(), text: e.textContent, value: $(e).attr('value') }) );
 			}
 			
@@ -1508,8 +1830,11 @@ $(function()
 			
 			this.options.getOptionForValue = function(value) { return this.predefinedOptions.find( e => $.qwerEq(value, e.value, false) ) };
 			
-			this.options.getOptions = this.options.getOptions.bind(this);
-			this.options.getOptionForValue = this.options.getOptionForValue.bind(this);
+			/*
+			 * this.options.getOptions = this.options.getOptions.bind(this);
+			 * this.options.getOptionForValue =
+			 * this.options.getOptionForValue.bind(this);
+			 */
 		}
 		
 		getOptions()
@@ -1517,18 +1842,26 @@ $(function()
 			this.minWidth = Math.max(this.placeholder.outerWidth(), this.minWidth);
 			this.sizeBox.css('minWidth', this.minWidth);
 			
-			let options = this.options
-				.getOptions( this.filter.val() ? this.filter.val() : undefined );
+			let p = this.options
+				.getOptions.call(this, this.filter.val() ? this.filter.val() : undefined);
 			
-			if(!this.options.showSelectedInMenu)
-				options = options.filter( e => !this._value.includes(e.value) );
+			if( !(p instanceof Promise) )
+				p = Promise.resolve(p);
 			
-			options = options.map( e => $.extend(e, { onClick: this.selectOption.bind(this, e) }) );
-			
-			if(options.length == 0)
-				options.push({ disabled: true, html: '<i>No options available</i>' });
-			
-			return options;
+			return p.then(options => 
+			{
+				options = options || [];
+				
+				if(!this.options.showSelectedInMenu)
+					options = options.filter( e => !this._value.includes(e.value) );
+				
+				options = options.map( e => $.extend(e, { onClick: this.selectOption.bind(this, e) }) );
+				
+				if(options.length == 0)
+					options.push({ disabled: true, html: '<i>No options available</i>' });
+				
+				return options;
+			});
 		}
 		
 		selectOption(option, noTriggerChange)
@@ -1591,7 +1924,7 @@ $(function()
 		
 		unselectValue(value)
 		{
-			this.unselectOption( this.options.getOptionForValue(value) );
+			this.unselectOption( this.options.getOptionForValue.call(this, value) );
 		}
 		
 		unselectOption(option, noTriggerChange)
@@ -1638,7 +1971,7 @@ $(function()
 				this.menu.setVisible();
 			
 			this.updatePlaceholder();
-			this.updateItems();
+			this.updateItems(true);
 			this.menu.setPreselectedIndex(0);
 		}
 		
@@ -1659,7 +1992,7 @@ $(function()
 			
 			for(let v of value)
 			{
-				let option = this.options.getOptionForValue(v);
+				let option = this.options.getOptionForValue.call(this, v);
 				
 				if(option != null)
 					this.selectOption(option, true);
@@ -1667,22 +2000,26 @@ $(function()
 			
 			this.updatePlaceholder();
 			this.triggerChange();
-			this.updateItems();
+			this.updateItems(true);
 		}
 		
-		updateItems()
+		updateItems(noSetValue)
 		{
-			this.menu.updateItems();
-			//this.updateSize();
-		}
-		
-		/*updateSize()
-		{
-			for(let item of this.menu.items || [])
-				this.minWidth = Math.max(item.element && item.element.outerWidth(), this.minWidth);
+			if(!noSetValue)
+				this.setValue(this.value);
 			
-			this.sizeBox.css('minWidth', this.minWidth);
-		}*/
+			if(!this.menu.visible)
+				return;
+			
+			this.menu.updateItems();
+		}
+		
+		/*
+		 * updateSize() { for(let item of this.menu.items || []) this.minWidth =
+		 * Math.max(item.element && item.element.outerWidth(), this.minWidth);
+		 * 
+		 * this.sizeBox.css('minWidth', this.minWidth); }
+		 */
 		
 		get value()
 		{
@@ -1715,7 +2052,7 @@ $(function()
 	
 	$.fn.qwerForm = function(options)
 	{
-		return createEach(this, QwerForm, options);
+		return createEach(this, QwerFormControl, options);
 	};
 	
 	$.fn.qwerFlyout = function(options)
@@ -1726,6 +2063,11 @@ $(function()
 	$.fn.qwerMenu = function(options)
 	{
 		return createEach(this, QwerMenu, options);
+	};
+	
+	$.fn.qwerContextMenu = function(options)
+	{
+		return createEach(this, QwerContextMenu, options);
 	};
 	
 	$.fn.qwerSelect = function(options)
