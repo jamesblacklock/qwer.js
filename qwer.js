@@ -1204,6 +1204,12 @@ $(function()
 					this.inHideTransition = false;
 					this.target.removeClass('qwerFlyoutVisible');
 					this.anchorPoint.detach();
+					
+					if(this.reopen)
+					{
+						this.reopen = false;
+						this.setVisible(true);
+					}
 				}
 			});
 		}
@@ -1233,16 +1239,16 @@ $(function()
 			requestAnimationFrame( () => this.updatePositioning() );
 		}
 		
-		setVisible(set)
+		setVisible(set, reopen)
 		{
-			if(this.inHideTransition)
-				return;
-			
 			if(set == null)
 				set = true;
 			
-			if(this.visible == !!set)
+			if(this.inHideTransition || this.visible == !!set)
+			{
+				this.reopen = reopen;
 				return;
+			}
 			
 			this.visible = !!set;
 			
@@ -1579,9 +1585,9 @@ $(function()
 			}
 		}
 		
-		setVisible(set)
+		setVisible(set, reopen)
 		{
-			this.flyout.setVisible(set);
+			this.flyout.setVisible(set, reopen);
 		}
 		
 		get visible()
@@ -1632,7 +1638,7 @@ $(function()
 			else
 			{
 				e.preventDefault();
-				this.setVisible(true, e.clientX, e.clientY);
+				this.setVisible(true, e.clientX, e.clientY, true);
 				this.mouseUpTriggered = true;
 			}
 		}
@@ -1669,15 +1675,13 @@ $(function()
 			}
 		}
 		
-		setVisible(set, x, y)
+		setVisible(set, x, y, reopen)
 		{
-			this.anchorPoint.css(
-			{
-				left: x || 0,
-				top:  y || 0
-			});
+			if(x === true && y === undefined && reopen === undefined)
+				reopen = true;
 			
-			this.menu.setVisible(set);
+			this.anchorPoint.css({ left: x||0, top: y||0 });
+			this.menu.setVisible(set, reopen);
 		}
 		
 		get visible()
