@@ -1197,19 +1197,24 @@ $(function()
 			
 			this.target.data('qwerFlyout', this);
 			
-			this.overlay.on('transitionend', () => 
+			this.overlay.on('transitionend', e => 
 			{
-				if(this.visible == false)
+				if(e.originalEvent.propertyName == 'opacity')
 				{
-					this.inHideTransition = false;
-					this.target.removeClass('qwerFlyoutVisible');
-					this.anchorPoint.detach();
-					
-					if(this.reopen)
+					if(this.visible == false)
 					{
-						this.reopen = false;
-						this.setVisible(true);
+						this.inHideTransition = false;
+						this.target.removeClass('qwerFlyoutVisible');
+						this.anchorPoint.detach();
+						
+						if(this.reopen)
+						{
+							this.reopen = false;
+							this.setVisible(true);
+						}
 					}
+					
+					this.flyout.css('pointer-events', '');
 				}
 			});
 		}
@@ -1252,13 +1257,14 @@ $(function()
 			
 			this.visible = !!set;
 			
+			this.flyout.css('pointer-events', 'none');
+			
 			if(this.visible)
 			{
 				this.windowResizeHandler = this.updatePositioning.bind(this);
 				$(window).on('resize', this.windowResizeHandler)
 				
 				this.sendToTop();
-				
 				
 				this.target.addClass('qwerFlyoutVisible');
 				
@@ -1276,15 +1282,21 @@ $(function()
 					let anchorTop = this.anchorPoint.offset().top;
 					
 					if(this.usingTop)
-						this.anchorPoint.css( 'top', anchorTop + this.target.outerHeight() );
+						this.anchorPoint.css( 'top', anchorTop + this.target.outerHeight() + this.flyout.outerHeight()/3 );
 					else
 						this.anchorPoint.css( 'top', anchorTop - this.target.outerHeight() );
 					
 					this.overlay.css(
 					{
+						width: '', 
+						left: '', 
+						height: '',
+						opacity: ''
+					}).css(
+					{
 						width: this.flyout.outerWidth()/2, 
 						left: this.flyout.outerWidth()/4, 
-						height: this.flyout.outerHeight()/2,
+						height: this.flyout.outerHeight()/4,
 						opacity: 0
 					});
 					
@@ -1311,7 +1323,7 @@ $(function()
 				let anchorTop = this.anchorPoint.offset().top;
 				
 				if(this.usingTop)
-					this.anchorPoint.css( 'top', anchorTop + this.flyout.outerHeight()*9/16 );
+					this.anchorPoint.css( 'top', anchorTop + this.flyout.outerHeight()*3/4 );
 				else
 					this.anchorPoint.css( 'top', anchorTop - this.target.outerHeight() );
 				
@@ -1319,7 +1331,7 @@ $(function()
 				{
 					width: this.flyout.outerWidth()/2, 
 					left: this.flyout.outerWidth()/4, 
-					height: this.flyout.outerHeight()/2, 
+					height: this.flyout.outerHeight()/4, 
 					opacity: 0
 				});
 			}

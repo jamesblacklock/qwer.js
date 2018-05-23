@@ -61,12 +61,13 @@
 .qwerPanel > .e,
 .qwerPanel > .w
 {
+	top: 0;
 	width: 7px;
 	height: 100%;
 	cursor: ew-resize;
 }
 .qwerPanel > .n    { top:    -4px; }
-.qwerPanel > .s    { bottom: -4px; }
+.qwerPanel > .s    { top:    calc(100% - 3px); }
 .qwerPanel > .e    { right:  -4px; }
 .qwerPanel > .w    { left:   -4px; }
 .qwerPanel > .n.e,
@@ -74,9 +75,9 @@
 .qwerPanel > .n.w,
 .qwerPanel > .s.w  { width: 7px; height: 7px; }
 .qwerPanel > .n.e,
-.qwerPanel > .s.w  { cursor: ne-resize; }
+.qwerPanel > .s.w  { cursor: nesw-resize; }
 .qwerPanel > .s.e,
-.qwerPanel > .n.w  { cursor: nw-resize; }
+.qwerPanel > .n.w  { cursor: nwse-resize; }
 
 .qwerModal > .qwerPanel
 {
@@ -192,12 +193,13 @@ body.qwerPanelDragging
 	opacity: 0;
 	overflow: hidden;
 	position: relative;
-	box-shadow: rgba(0,0,0,0.13) 0px 1px 6px;
+	box-shadow: rgba(0,0,0,0.08) 0 1px 3px;
+	transition: none;
 }
 
 .qwerAnchorPoint.flyout.transitions > .qwerOverlay
 {
-	transition: opacity 200ms, width 150ms, left 150ms, height 188ms, top 188ms;
+	transition: opacity linear 200ms, width 150ms, left 150ms, height 188ms, top 188ms;
 }
 
 .qwerFlyout
