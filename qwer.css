@@ -150,7 +150,7 @@ body.qwerPanelDragging
 	background: none;
 	border: none;
 	font-size: inherit;
-	align-self: center;
+	align-self: baseline;
 	cursor: pointer;
 	margin: 0 0 0 6px;
 }

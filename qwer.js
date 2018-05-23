@@ -1282,7 +1282,7 @@ $(function()
 					let anchorTop = this.anchorPoint.offset().top;
 					
 					if(this.usingTop)
-						this.anchorPoint.css( 'top', anchorTop + this.target.outerHeight() + this.flyout.outerHeight()/3 );
+						this.anchorPoint.css( 'top', anchorTop + this.target.outerHeight() + this.flyout.outerHeight()*3/4 );
 					else
 						this.anchorPoint.css( 'top', anchorTop - this.target.outerHeight() );
 					
@@ -1296,7 +1296,7 @@ $(function()
 					{
 						width: this.flyout.outerWidth()/2, 
 						left: this.flyout.outerWidth()/4, 
-						height: this.flyout.outerHeight()/4,
+						height: this.flyout.outerHeight()/8,
 						opacity: 0
 					});
 					
